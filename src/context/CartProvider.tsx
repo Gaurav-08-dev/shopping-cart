@@ -29,112 +29,119 @@ export type ReducerAction = {
   payload?: CartItemType;
 };
 
-const reducer = (state: CartStateType, action: ReducerAction): CartStateType => {
-
+const reducer = (
+  state: CartStateType,
+  action: ReducerAction
+): CartStateType => {
   switch (action.type) {
     case REDUCER_ACTION_TYPE.ADD: {
+      if (!action.payload) throw new Error("action.payload missing in ADD");
 
-        if(!action.payload) throw new Error('action.payload missing in ADD')
+      const { sku, name, price } = action.payload;
+      const filteredCart: CartItemType[] = state.cart.filter(
+        (item) => item.sku !== sku
+      );
 
-        const {sku,name,price}=action.payload;
-        const filteredCart:CartItemType[]=state.cart.filter(item => item.sku !== sku)
+      const itemExists: CartItemType | undefined = state.cart.find(
+        (item) => item.sku === sku
+      );
 
-        const itemExists:CartItemType | undefined= state.cart.find(item => item.sku === sku)
+      const qty: number = itemExists ? itemExists.qty + 1 : 1;
 
-        const qty:number= itemExists? itemExists.qty + 1:1;
-
-        return {...state,cart:[...filteredCart,{sku,name,price,qty}]}
-
+      return { ...state, cart: [...filteredCart, { sku, name, price, qty }] };
     }
 
     case REDUCER_ACTION_TYPE.REMOVE: {
-        if(!action.payload) throw new Error('action.payload missing in Remove')
+      if (!action.payload) throw new Error("action.payload missing in Remove");
 
-        const {sku}=action.payload;
+      const { sku } = action.payload;
 
-        const filteredCart:CartItemType[]=state.cart.filter(item => item.sku !== sku)
+      const filteredCart: CartItemType[] = state.cart.filter(
+        (item) => item.sku !== sku
+      );
 
-        return {...state, cart:[...filteredCart]}
-
+      return { ...state, cart: [...filteredCart] };
     }
 
     case REDUCER_ACTION_TYPE.QUANTITY: {
-        if(!action.payload) throw new Error('action.payload missing in Quantity')
+      if (!action.payload)
+        throw new Error("action.payload missing in Quantity");
 
-        const {sku,qty} = action.payload;
+      const { sku, qty } = action.payload;
 
-        const itemExists:CartItemType | undefined = state.cart.find(item => item.sku === sku);
+      const itemExists: CartItemType | undefined = state.cart.find(
+        (item) => item.sku === sku
+      );
 
-        if(!itemExists) throw new Error('Item must exist in the cart')
+      if (!itemExists) throw new Error("Item must exist in the cart");
 
-        const updatedItem:CartItemType={...itemExists,qty}
+      const updatedItem: CartItemType = { ...itemExists, qty };
 
-        const filteredCart:CartItemType[]=state.cart.filter(item => item.sku !== sku)
+      const filteredCart: CartItemType[] = state.cart.filter(
+        (item) => item.sku !== sku
+      );
 
-        return {...state, cart:[...filteredCart,updatedItem]}
-
-
+      return { ...state, cart: [...filteredCart, updatedItem] };
     }
 
     case REDUCER_ACTION_TYPE.SUBMIT: {
-
-        return {...state, cart:[]}
+      return { ...state, cart: [] };
     }
 
-    default: throw new Error('Unidentified reducer action type')
+    default:
+      throw new Error("Unidentified reducer action type");
   }
 };
 
-const useCartContext=(initCartState:CartStateType)=>{
+const useCartContext = (initCartState: CartStateType) => {
+  const [state, dispatch] = useReducer(reducer, initCartState);
 
-    const [state,dispatch]=useReducer(reducer,initCartState);
+  const REDUCER_ACTIONS = useMemo(() => {
+    return REDUCER_ACTION_TYPE;
+  }, []);
 
+  const totalItems: number = state.cart.reduce((previousValue, CartItem) => {
+    return previousValue + CartItem.qty;
+  }, 0);
 
-    const REDUCER_ACTIONS=useMemo(()=>{
-        return REDUCER_ACTION_TYPE
-    },[]);
+  const totalPrice = new Intl.NumberFormat("en-IN", {
+    style: "currency",
+    currency: "INR",
+  }).format(
+    state.cart.reduce((previousItem, cartItem) => {
+      return previousItem + cartItem.qty * cartItem.price;
+    }, 0)
+  );
 
-    const totalItems:number = state.cart.reduce((previousValue, CartItem)=>{
-        return previousValue + CartItem.qty
-    },0);
+  const cart = state.cart.sort((a, b) => {
+    const itemA = Number(a.sku.slice(-4));
+    const itemB = Number(b.sku.slice(-4));
 
-    const totalPrice= new Intl.NumberFormat('en-IN', {style:'currency', currency:'INR'}).format(
-        state.cart.reduce((previousItem,cartItem)=>{
+    return itemA - itemB;
+  });
 
-            return previousItem + (cartItem.qty * cartItem.price)
-        },0)
-    )
+  return { dispatch, REDUCER_ACTIONS, totalItems, totalPrice, cart };
+};
 
-    const cart = state.cart.sort((a,b)=>{
-        const itemA=Number(a.sku.slice(-4))
-        const itemB=Number(b.sku.slice(-4))
+export type UseCartContextType = ReturnType<typeof useCartContext>;
 
-        return itemA - itemB
-    })
+const initCartContextState: UseCartContextType = {
+  dispatch: () => {},
+  REDUCER_ACTIONS: REDUCER_ACTION_TYPE,
+  totalPrice: "",
+  totalItems: 0,
+  cart: [],
+};
 
+export const CartContext =
+  createContext<UseCartContextType>(initCartContextState);
 
-    return {dispatch,REDUCER_ACTIONS,totalItems,totalPrice,cart}
-} 
+type ChildrenType = { children?: ReactElement | ReactElement[] };
 
-
-export type UseCartContextType = ReturnType<typeof useCartContext>
-
-
-const initCartContextState:UseCartContextType= {
-    dispatch:()=>{},
-    REDUCER_ACTIONS:REDUCER_ACTION_TYPE,
-    totalPrice:'',
-    totalItems:0,
-    cart:[]
-}
-
-
-export const CartContext= createContext<UseCartContextType>(initCartContextState);
-
-type ChildrenType={children?: ReactElement| ReactElement[]}
-
-export const CartProvider= ({children}:ChildrenType):ReactElement=>{
-    return <CartContext.Provider value={useCartContext(initCartState)}>
-        {children}
+export const CartProvider = ({ children }: ChildrenType): ReactElement => {
+  return (
+    <CartContext.Provider value={useCartContext(initCartState)}>
+      {children}
     </CartContext.Provider>
-}
+  );
+};
