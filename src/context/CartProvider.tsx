@@ -34,6 +34,7 @@ const reducer = (
   action: ReducerAction
 ): CartStateType => {
   switch (action.type) {
+    
     case REDUCER_ACTION_TYPE.ADD: {
       if (!action.payload) throw new Error("action.payload missing in ADD");
 
