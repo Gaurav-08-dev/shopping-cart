@@ -1,26 +1,30 @@
-import { ReactElement } from "react"
+import { ReactElement } from "react";
+import Nav from "./Nav";
+import useCart from "../hooks/useCart";
 
-type PropsType={
-  viewCart:boolean,
-  setViewCart:React.Dispatch<React.SetStateAction<boolean>>,
-}
 
-const Header = ({viewCart,setViewCart}:PropsType): ReactElement => {
+type PropsType = {
+  viewCart: boolean;
+  setViewCart: React.Dispatch<React.SetStateAction<boolean>>;
+};
 
-  const content=(
+
+const Header = ({ viewCart, setViewCart }: PropsType): ReactElement => {
+
+  const {totalItems,totalPrice}=useCart();
+  const content = (
     <header className="header">
       <div className="header__title-bar">
         <h1>Systumm Co.</h1>
         <div className="header__price-box">
-          <p>Total Items:</p>
-          <p>Total Price:</p>
+          <p>Total Items:{totalItems}</p>
+          <p>Total Price:{totalPrice}</p>
         </div>
       </div>
+      <Nav viewCart={viewCart} setViewCart={setViewCart}/>
     </header>
-  )
-  return (
-    <div>Header</div>
-  )
-}
+  );
+  return content;
+};
 
-export default Header
+export default Header;
